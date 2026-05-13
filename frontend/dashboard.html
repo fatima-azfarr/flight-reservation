@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SkyWay — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<nav class="navbar">
+  <a class="nav-brand" href="index.html">✈ SkyWay</a>
+  <div class="nav-links">
+    <a href="index.html">Search</a>
+    <a href="luggage.html">Track Luggage</a>
+    <a href="dashboard.html" class="active">My Bookings</a>
+  </div>
+  <div class="nav-auth">
+    <span id="navUserName" class="nav-user"></span>
+    <button class="btn-outline" onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<div class="dashboard-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="profile-card">
+      <div class="profile-avatar" id="profileAvatar">A</div>
+      <div class="profile-name" id="profileName">Loading...</div>
+      <div class="profile-email" id="profileEmail"></div>
+      <div class="loyalty-badge" id="loyaltyBadge">
+        <span id="tierLevel">Bronze</span>
+        <span id="loyaltyPoints">0 pts</span>
+      </div>
+    </div>
+    <nav class="dash-nav">
+      <button class="dash-tab active" onclick="showTab('bookings', this)">✈ My Bookings</button>
+      <button class="dash-tab" onclick="showTab('refunds', this)">↩ Refunds</button>
+      <button class="dash-tab" onclick="showTab('notifications', this)">🔔 Notifications</button>
+      <button class="dash-tab" onclick="showTab('payments', this)">💳 Payments</button>
+    </nav>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="dash-main">
+
+    <!-- BOOKINGS TAB -->
+    <div id="tab-bookings" class="tab-content active">
+      <div class="tab-header">
+        <h2>My Bookings</h2>
+      </div>
+      <div id="bookingsList" class="bookings-list">
+        <div class="loading-spinner">Loading...</div>
+      </div>
+    </div>
+
+    <!-- REFUNDS TAB -->
+    <div id="tab-refunds" class="tab-content">
+      <div class="tab-header"><h2>Refund Requests</h2></div>
+      <div id="refundsList" class="bookings-list"></div>
+    </div>
+
+    <!-- NOTIFICATIONS TAB -->
+    <div id="tab-notifications" class="tab-content">
+      <div class="tab-header"><h2>Flight Notifications</h2></div>
+      <div id="notificationsList" class="bookings-list"></div>
+    </div>
+
+    <!-- PAYMENTS TAB -->
+    <div id="tab-payments" class="tab-content">
+      <div class="tab-header"><h2>Payment History</h2></div>
+      <div id="paymentsList" class="bookings-list"></div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  if (!user) window.location.href = 'login.html';
+
+  document.getElementById('navUserName').textContent = user?.name || '';
+  document.getElementById('profileAvatar').textContent = (user?.name || 'U')[0].toUpperCase();
+  document.getElementById('profileName').textContent = user?.name || '';
+  document.getElementById('profileEmail').textContent = user?.email || '';
+
+  async function loadProfile() {
+    const data = await api.get('/auth/profile');
+    if (!data.error) {
+      document.getElementById('tierLevel').textContent = data.tierLevel || 'Bronze';
+      document.getElementById('loyaltyPoints').textContent = (data.loyaltyPoints || 0) + ' pts';
+    }
+  }
+
+  async function loadBookings() {
+    const bookings = await api.get('/bookings/my');
+    const el = document.getElementById('bookingsList');
+    if (!bookings.length) { el.innerHTML = '<p class="empty-state">No bookings yet. <a href="index.html">Search flights</a></p>'; return; }
+
+    el.innerHTML = bookings.map(b => `
+      <div class="booking-card">
+        <div class="booking-route">
+          <span class="city">${b.fromLocation}</span>
+          <span class="route-arrow">✈</span>
+          <span class="city">${b.toLocation}</span>
+        </div>
+        <div class="booking-meta">
+          <span>Flight: <b>${b.flightNumber}</b></span>
+          <span>Seat: <b>${b.seatNumber}</b></span>
+          <span>Date: <b>${new Date(b.departureTime).toLocaleDateString()}</b></span>
+          <span class="status-badge ${b.paymentStatus.toLowerCase()}">${b.paymentStatus}</span>
+          <span class="status-badge ${b.flightStatus.toLowerCase().replace(/[- ]/g,'')}">${b.flightStatus}</span>
+        </div>
+        <div class="booking-amount">PKR ${Number(b.totalAmount).toLocaleString()}</div>
+        ${b.paymentStatus === 'Pending' ? `<button class="btn-solid small" onclick="payBooking('${b.bookingId}', ${b.totalAmount})">Pay Now</button>` : ''}
+        <button class="btn-danger small" onclick="cancelBooking('${b.bookingId}')">Cancel</button>
+      </div>
+    `).join('');
+  }
+
+  async function loadRefunds() {
+    const refunds = await api.get('/payments/refunds/my');
+    const el = document.getElementById('refundsList');
+    if (!refunds.length) { el.innerHTML = '<p class="empty-state">No refund requests.</p>'; return; }
+    el.innerHTML = refunds.map(r => `
+      <div class="booking-card">
+        <div class="booking-route">
+          <span class="city">${r.fromLocation}</span><span class="route-arrow">✈</span><span class="city">${r.toLocation}</span>
+        </div>
+        <div class="booking-meta">
+          <span>Flight: <b>${r.flightNumber}</b></span>
+          <span>Amount: <b>PKR ${Number(r.refundAmount).toLocaleString()}</b></span>
+          <span>Requested: <b>${new Date(r.requestDate).toLocaleDateString()}</b></span>
+          <span class="status-badge ${r.status.toLowerCase()}">${r.status}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function loadNotifications() {
+    const notifs = await api.get('/notifications');
+    const el = document.getElementById('notificationsList');
+    if (!notifs.length) { el.innerHTML = '<p class="empty-state">No notifications.</p>'; return; }
+    el.innerHTML = notifs.map(n => `
+      <div class="notif-card">
+        <div class="notif-icon">🔔</div>
+        <div class="notif-body">
+          <p>${n.message}</p>
+          <small>${n.flightNumber} · ${new Date(n.notificationDate).toLocaleString()}</small>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function loadPayments() {
+    const payments = await api.get('/payments/my');
+    const el = document.getElementById('paymentsList');
+    if (!payments.length) { el.innerHTML = '<p class="empty-state">No payments yet.</p>'; return; }
+    el.innerHTML = payments.map(p => `
+      <div class="booking-card">
+        <div class="booking-route">
+          <span class="city">${p.fromLocation}</span><span class="route-arrow">✈</span><span class="city">${p.toLocation}</span>
+        </div>
+        <div class="booking-meta">
+          <span>Flight: <b>${p.flightNumber}</b></span>
+          <span>Method: <b>${p.paymentMethod}</b></span>
+          <span>Date: <b>${new Date(p.paymentDate).toLocaleDateString()}</b></span>
+          <span class="status-badge ${p.paymentStatus.toLowerCase()}">${p.paymentStatus}</span>
+        </div>
+        <div class="booking-amount">PKR ${Number(p.paymentAmount).toLocaleString()}</div>
+      </div>
+    `).join('');
+  }
+
+  async function cancelBooking(bookingId) {
+    if (!confirm('Cancel this booking? A refund will be requested.')) return;
+    const result = await api.delete(`/bookings/${bookingId}`);
+    if (result.error) alert(result.error);
+    else { alert('Booking cancelled. Refund requested.'); loadBookings(); }
+  }
+
+  async function payBooking(bookingId, amount) {
+    const method = prompt('Payment method?\n1) Credit Card\n2) Debit Card\n3) Bank Transfer\n4) Cash', 'Credit Card');
+    if (!method) return;
+    const result = await api.post('/payments', { bookingId, paymentMethod: method, paymentAmount: amount });
+    if (result.error) alert(result.error);
+    else { alert(`Payment successful! You earned ${result.pointsEarned} loyalty points.`); loadBookings(); loadProfile(); }
+  }
+
+  function showTab(name, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+    if (name === 'refunds') loadRefunds();
+    if (name === 'notifications') loadNotifications();
+    if (name === 'payments') loadPayments();
+  }
+
+  function logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = 'login.html';
+  }
+
+  loadProfile();
+  loadBookings();
+</script>
+</body>
+</html>

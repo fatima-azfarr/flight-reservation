@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SkyWay — Register</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+</head>
+<body class="auth-page">
+
+<nav class="navbar">
+  <a class="nav-brand" href="index.html">✈ SkyWay</a>
+  <div></div>
+  <div class="nav-auth">
+    <a href="login.html" class="btn-outline">Login</a>
+  </div>
+</nav>
+
+<div class="auth-container">
+  <div class="auth-card wide">
+    <div class="auth-header">
+      <span class="auth-icon">✈</span>
+      <h1>Create Account</h1>
+      <p>Join SkyWay and start booking smarter</p>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Full Name *</label>
+        <input type="text" id="nameInput" placeholder="Ahmed Khan" />
+      </div>
+      <div class="form-group">
+        <label>Email Address *</label>
+        <input type="email" id="emailInput" placeholder="ahmed@example.com" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" id="phoneInput" placeholder="03001234567" />
+      </div>
+      <div class="form-group">
+        <label>Password *</label>
+        <input type="password" id="passwordInput" placeholder="Min 8 characters" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Country *</label>
+        <input type="text" id="countryInput" value="Pakistan" />
+      </div>
+      <div class="form-group">
+        <label>City *</label>
+        <input type="text" id="cityInput" placeholder="Lahore" />
+      </div>
+    </div>
+
+    <button class="btn-solid full-width" onclick="register()">Create Account</button>
+    <div id="registerMsg" class="msg"></div>
+    <p class="auth-switch">Already have an account? <a href="login.html">Login here</a></p>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+async function register() {
+  const msg = document.getElementById('registerMsg');
+  const data = {
+    name: document.getElementById('nameInput').value.trim(),
+    email: document.getElementById('emailInput').value.trim(),
+    phoneNumber: document.getElementById('phoneInput').value.trim(),
+    password: document.getElementById('passwordInput').value,
+    country: document.getElementById('countryInput').value.trim(),
+    city: document.getElementById('cityInput').value.trim()
+  };
+
+  if (!data.name || !data.email || !data.password || !data.country || !data.city) {
+    return showMsg(msg, 'Please fill in all required fields.', 'error');
+  }
+  if (data.password.length < 8) {
+    return showMsg(msg, 'Password must be at least 8 characters.', 'error');
+  }
+
+  showMsg(msg, 'Creating your account...', 'info');
+
+  const result = await api.post('/auth/register', data);
+
+  if (result.error) {
+    showMsg(msg, result.error, 'error');
+  } else {
+    localStorage.setItem('token', result.token);
+    localStorage.setItem('user', JSON.stringify({ userId: result.userId, name: result.name, email: result.email }));
+    showMsg(msg, 'Account created! Redirecting...', 'success');
+    setTimeout(() => window.location.href = 'dashboard.html', 1000);
+  }
+}
+</script>
+</body>
+</html>

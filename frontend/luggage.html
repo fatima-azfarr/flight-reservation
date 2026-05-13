@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SkyWay — Track Luggage</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<nav class="navbar">
+  <a class="nav-brand" href="index.html">✈ SkyWay</a>
+  <div class="nav-links">
+    <a href="index.html">Search</a>
+    <a href="luggage.html" class="active">Track Luggage</a>
+    <a href="dashboard.html">My Bookings</a>
+  </div>
+  <div class="nav-auth" id="navAuth"></div>
+</nav>
+
+<section class="luggage-hero">
+  <div class="container">
+    <h1 class="page-title">Track Your <span>Luggage</span></h1>
+    <p class="page-sub">Enter your tracking number to see real-time baggage status</p>
+
+    <div class="track-bar">
+      <input type="text" id="trackInput" placeholder="e.g. TRKAB1234" maxlength="12"/>
+      <button class="btn-solid" onclick="trackLuggage()">Track Now</button>
+    </div>
+
+    <div id="trackResult" class="track-result" style="display:none">
+      <div class="track-header">
+        <div>
+          <div class="track-id" id="trackId"></div>
+          <div class="track-passenger" id="trackPassenger"></div>
+          <div class="track-flight" id="trackFlight"></div>
+        </div>
+        <div class="track-status-badge" id="trackStatusBadge"></div>
+      </div>
+
+      <!-- PROGRESS STEPS -->
+      <div class="track-progress">
+        <div class="progress-step" data-step="Check-in Counter">
+          <div class="step-dot"></div>
+          <div class="step-label">Check-in</div>
+        </div>
+        <div class="progress-line"></div>
+        <div class="progress-step" data-step="Security Check">
+          <div class="step-dot"></div>
+          <div class="step-label">Security</div>
+        </div>
+        <div class="progress-line"></div>
+        <div class="progress-step" data-step="Sorting Area">
+          <div class="step-dot"></div>
+          <div class="step-label">Sorting</div>
+        </div>
+        <div class="progress-line"></div>
+        <div class="progress-step" data-step="Loaded on Flight">
+          <div class="step-dot"></div>
+          <div class="step-label">On Flight</div>
+        </div>
+        <div class="progress-line"></div>
+        <div class="progress-step" data-step="Baggage Claim">
+          <div class="step-dot"></div>
+          <div class="step-label">Baggage Claim</div>
+        </div>
+        <div class="progress-line"></div>
+        <div class="progress-step" data-step="Delivered">
+          <div class="step-dot"></div>
+          <div class="step-label">Delivered</div>
+        </div>
+      </div>
+
+      <div class="track-location-label">Current Location: <b id="currentLocation"></b></div>
+    </div>
+
+    <div id="trackError" class="msg error" style="display:none"></div>
+  </div>
+</section>
+
+<script src="js/api.js"></script>
+<script>
+  const steps = ['Check-in Counter','Security Check','Sorting Area','Loaded on Flight','In Transit','Baggage Claim','Delivered'];
+
+  async function trackLuggage() {
+    const num = document.getElementById('trackInput').value.trim().toUpperCase();
+    const resultEl = document.getElementById('trackResult');
+    const errorEl = document.getElementById('trackError');
+
+    if (!num) return;
+
+    errorEl.style.display = 'none';
+    resultEl.style.display = 'none';
+
+    const data = await api.getPublic(`/luggage/track/${num}`);
+
+    if (data.error) {
+      errorEl.textContent = data.error;
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    document.getElementById('trackId').textContent = 'Tracking #' + data.trackingNumber;
+    document.getElementById('trackPassenger').textContent = 'Passenger: ' + data.passengerName;
+    document.getElementById('trackFlight').textContent = `${data.flightNumber} · ${data.fromLocation} → ${data.toLocation}`;
+    document.getElementById('trackStatusBadge').textContent = data.status;
+    document.getElementById('trackStatusBadge').className = 'track-status-badge ' + data.status.toLowerCase().replace(/ /g,'-');
+    document.getElementById('currentLocation').textContent = data.location || 'Unknown';
+
+    // Highlight progress
+    const currentIdx = steps.indexOf(data.location);
+    document.querySelectorAll('.progress-step').forEach((step, i) => {
+      step.classList.remove('done', 'current');
+      if (i < currentIdx) step.classList.add('done');
+      else if (i === currentIdx) step.classList.add('current');
+    });
+
+    resultEl.style.display = 'block';
+  }
+
+  document.getElementById('trackInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') trackLuggage();
+  });
+
+  // Nav auth state
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const navAuth = document.getElementById('navAuth');
+  if (user) {
+    navAuth.innerHTML = `<span class="nav-user">${user.name}</span><button class="btn-outline" onclick="localStorage.clear();location.href='login.html'">Logout</button>`;
+  } else {
+    navAuth.innerHTML = `<a href="login.html" class="btn-outline">Login</a><a href="register.html" class="btn-solid">Register</a>`;
+  }
+</script>
+</body>
+</html>
