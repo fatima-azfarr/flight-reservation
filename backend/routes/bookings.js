@@ -58,9 +58,11 @@ router.get('/my', auth, async (req, res) => {
   try {
     const [bookings] = await db.query(
       `SELECT b.bookingId, b.bookingDate, b.seatNumber, b.paymentStatus, b.totalAmount,
-              f.flightNumber, f.fromLocation, f.toLocation, f.departureTime, f.arrivalTime, f.status AS flightStatus
+              f.flightNumber, f.fromLocation, f.toLocation, f.departureTime, f.arrivalTime, f.status AS flightStatus,
+              l.trackingNumber, l.status AS luggageStatus, l.location AS luggageLocation
        FROM Booking b
        JOIN Flight f ON b.flightId = f.flightId
+       LEFT JOIN Luggage l ON b.bookingId = l.bookingId
        WHERE b.userId = ?
        ORDER BY b.bookingDate DESC`,
       [req.user.userId]

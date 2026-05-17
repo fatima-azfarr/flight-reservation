@@ -115,8 +115,23 @@
           <span class="status-badge ${b.flightStatus.toLowerCase().replace(/[- ]/g,'')}">${b.flightStatus}</span>
         </div>
         <div class="booking-amount">PKR ${Number(b.totalAmount).toLocaleString()}</div>
-        ${b.paymentStatus === 'Pending' ? `<button class="btn-solid small" onclick="payBooking('${b.bookingId}', ${b.totalAmount})">Pay Now</button>` : ''}
-        <button class="btn-danger small" onclick="cancelBooking('${b.bookingId}')">Cancel</button>
+        ${b.trackingNumber ? `
+          <div class="luggage-info">
+            <span class="luggage-icon">📦</span>
+            <div class="luggage-details">
+              <span>Luggage: <b>${b.luggageStatus || 'Checked-in'}</b> · ${b.luggageLocation || 'Check-in Counter'}</span>
+              <div class="tracking-row">
+                <span class="tracking-num">Tracking: <b>#${b.trackingNumber}</b></span>
+                <button class="copy-btn" onclick="copyTracking('${b.trackingNumber}')" title="Copy tracking number">⧉</button>
+                <a href="luggage.html?track=${b.trackingNumber}" class="track-link">Track →</a>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+        <div class="booking-actions">
+          ${b.paymentStatus === 'Pending' ? `<button class="btn-solid small" onclick="payBooking('${b.bookingId}', ${b.totalAmount})">Pay Now</button>` : ''}
+          <button class="btn-danger small" onclick="cancelBooking('${b.bookingId}')">Cancel</button>
+        </div>
       </div>
     `).join('');
   }
@@ -232,6 +247,11 @@
     if (name === 'refunds') loadRefunds();
     if (name === 'notifications') loadNotifications();
     if (name === 'payments') loadPayments();
+  }
+
+  function copyTracking(trackingNumber) {
+    navigator.clipboard.writeText(trackingNumber);
+    alert('Tracking number copied: ' + trackingNumber);
   }
 
   function logout() {

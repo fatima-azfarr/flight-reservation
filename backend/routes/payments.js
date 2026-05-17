@@ -65,13 +65,23 @@ router.post('/', auth, async (req, res) => {
       [invoiceId, bookingId, invoiceNumber, totalWithTax, taxAmount, paymentMethod]
     );
 
+    // Auto-create luggage entry
+    const luggageId = 'L' + Math.random().toString(36).substr(2, 7).toUpperCase();
+    const trackingNumber = 'TRK' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    await conn.query(
+      `INSERT INTO Luggage (luggageId, bookingId, status, location, trackingNumber)
+       VALUES (?, ?, 'Checked-in', 'Check-in Counter', ?)`,
+      [luggageId, bookingId, trackingNumber]
+    );
+
     await conn.commit();
     res.status(201).json({
       message: 'Payment successful.',
       paymentId,
       invoiceId,
       invoiceNumber,
-      pointsEarned
+      pointsEarned,
+      trackingNumber
     });
   } catch (err) {
     await conn.rollback();
