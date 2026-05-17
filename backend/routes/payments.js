@@ -135,17 +135,17 @@ router.post('/refund', auth, async (req, res) => {
   }
 });
 
+
 // ─── GET MY REFUNDS ───────────────────────────────────────────
 // GET /api/payments/refunds/my
 router.get('/refunds/my', auth, async (req, res) => {
   try {
     const [refunds] = await db.query(
-      `SELECT r.*, f.flightNumber, f.fromLocation, f.toLocation
-       FROM Refund r
-       JOIN Booking b ON r.bookingId = b.bookingId
-       JOIN Flight f ON b.flightId = f.flightId
-       WHERE b.userId = ?
-       ORDER BY r.requestDate DESC`,
+      `SELECT refundId, refundAmount, status, requestDate, processedDate,
+              flightNumber, fromLocation, toLocation
+       FROM Refund
+       WHERE userId = ?
+       ORDER BY requestDate DESC`,
       [req.user.userId]
     );
     res.json(refunds);

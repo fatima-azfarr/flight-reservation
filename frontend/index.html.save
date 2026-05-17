@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -117,9 +118,9 @@
   <div class="form-group">
     <label>Seat Position</label>
     <select id="seatPosition">
-      <option value="Window">Window</option>
-      <option value="Middle">Middle</option>
-      <option value="Aisle">Aisle</option>
+      <option value="Window">🪟 Window</option>
+      <option value="Middle">➖ Middle</option>
+      <option value="Aisle">🚶 Aisle</option>
     </select>
   </div>
 </div>
@@ -128,6 +129,8 @@
       <select id="paymentMethod">
         <option value="Credit Card">Credit Card</option>
         <option value="Debit Card">Debit Card</option>
+        <option value="Bank Transfer">Bank Transfer</option>
+        <option value="Cash">Cash</option>
       </select>
     </div>
     <div class="modal-amount" id="modalAmount"></div>

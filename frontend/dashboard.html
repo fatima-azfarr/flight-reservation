@@ -128,13 +128,29 @@
     el.innerHTML = refunds.map(r => `
       <div class="booking-card">
         <div class="booking-route">
-          <span class="city">${r.fromLocation}</span><span class="route-arrow">✈</span><span class="city">${r.toLocation}</span>
+          <span class="city">${r.fromLocation || 'N/A'}</span>
+          <span class="route-arrow">✈</span>
+          <span class="city">${r.toLocation || 'N/A'}</span>
         </div>
         <div class="booking-meta">
-          <span>Flight: <b>${r.flightNumber}</b></span>
-          <span>Amount: <b>PKR ${Number(r.refundAmount).toLocaleString()}</b></span>
+          <span>Flight: <b>${r.flightNumber || 'N/A'}</b></span>
+          <span>Refund: <b>PKR ${Number(r.refundAmount).toLocaleString()}</b></span>
           <span>Requested: <b>${new Date(r.requestDate).toLocaleDateString()}</b></span>
+          ${r.processedDate ? `<span>Processed: <b>${new Date(r.processedDate).toLocaleDateString()}</b></span>` : ''}
           <span class="status-badge ${r.status.toLowerCase()}">${r.status}</span>
+        </div>
+        <div class="refund-timeline">
+          <div class="refund-step ${['Requested','Approved','Processed'].includes(r.status) ? 'done' : ''}">
+            <span class="rstep-dot"></span><span class="rstep-label">Requested</span>
+          </div>
+          <div class="refund-line"></div>
+          <div class="refund-step ${['Approved','Processed'].includes(r.status) ? 'done' : ''}">
+            <span class="rstep-dot"></span><span class="rstep-label">Approved</span>
+          </div>
+          <div class="refund-line"></div>
+          <div class="refund-step ${r.status === 'Processed' ? 'done' : ''}">
+            <span class="rstep-dot"></span><span class="rstep-label">Processed</span>
+          </div>
         </div>
       </div>
     `).join('');
@@ -176,10 +192,28 @@
   }
 
   async function cancelBooking(bookingId) {
-    if (!confirm('Cancel this booking? A refund will be requested.')) return;
+    const confirmed = confirm(
+      '⚠️ Cancel this booking?\n\n' +
+      'Your refund request will be submitted for review.\n' +
+      'Refunds are typically processed within 5-7 business days.\n\n' +
+      'Do you wish to proceed?'
+    );
+    if (!confirmed) return;
+
     const result = await api.delete(`/bookings/${bookingId}`);
-    if (result.error) alert(result.error);
-    else { alert('Booking cancelled. Refund requested.'); loadBookings(); }
+    if (result.error) {
+      alert('❌ Error: ' + result.error);
+    } else {
+      alert(
+        '✅ Booking Cancelled\n\n' +
+        'Your refund request has been submitted.\n' +
+        'Refund ID: ' + result.refundId + '\n' +
+        'Status: Requested — pending review\n\n' +
+        'Check the Refunds tab to track your refund.'
+      );
+      loadBookings();
+      showTab('refunds', document.querySelector('.dash-tab:nth-child(2)'));
+    }
   }
 
   async function payBooking(bookingId, amount) {

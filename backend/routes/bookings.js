@@ -99,8 +99,11 @@ router.delete('/:bookingId', auth, async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    const [bookings] = await conn.query(
-      'SELECT * FROM Booking WHERE bookingId = ? AND userId = ?',
+   const [bookings] = await conn.query(
+      `SELECT b.*, f.flightNumber, f.fromLocation, f.toLocation
+       FROM Booking b
+       JOIN Flight f ON b.flightId = f.flightId
+       WHERE b.bookingId = ? AND b.userId = ?`,
       [req.params.bookingId, req.user.userId]
     );
     if (bookings.length === 0) {
@@ -111,15 +114,18 @@ router.delete('/:bookingId', auth, async (req, res) => {
     const booking = bookings[0];
 
     // Create refund entry
+   // Restore seat
+    await conn.query('UPDATE Flight SET availableSeats = availableSeats + 1 WHERE flightId = ?', [booking.flightId]);
+
     const refundId = genId('R');
     await conn.query(
-      `INSERT INTO Refund (refundId, bookingId, refundAmount, status, requestDate)
-       VALUES (?, ?, ?, 'Requested', NOW())`,
-      [refundId, booking.bookingId, booking.totalAmount]
+      `INSERT INTO Refund (refundId, bookingId, userId, flightNumber, fromLocation, toLocation, refundAmount, status, requestDate)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'Requested', NOW())`,
+      [refundId, booking.bookingId, req.user.userId, booking.flightNumber, booking.fromLocation, booking.toLocation, booking.totalAmount]
     );
 
-    // Restore seat
-    await conn.query('UPDATE Flight SET availableSeats = availableSeats + 1 WHERE flightId = ?', [booking.flightId]);
+    // Detach from booking so CASCADE doesn't delete the refund
+    await conn.query('UPDATE Refund SET bookingId = NULL WHERE refundId = ?', [refundId]);
 
     // Delete booking
     await conn.query('DELETE FROM Booking WHERE bookingId = ?', [booking.bookingId]);
